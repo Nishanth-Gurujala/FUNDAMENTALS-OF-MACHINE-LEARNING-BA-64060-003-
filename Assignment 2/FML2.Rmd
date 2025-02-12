@@ -1,0 +1,86 @@
+---
+title: "FML Assignment - 2"
+author: "Nishath Gurujala"
+date: "2024-09-14"
+output: html_document
+---
+
+# Loading libraries
+```{r}
+library(ISLR)
+library(caret)
+library(dplyr)
+```
+
+
+# Loading the Carseats dataset
+```{r}
+data(Carseats)
+```
+
+
+# summary
+```{r}
+summary(Carseats)
+```
+# Interpretation
+
+The summary of the data gives basic description and quantitative characteristics such as means, medians as well as ranges of the variables to ensure one is aware of the nature of the data set.
+
+# Creating an index for 75% of the data for Temp
+
+```{r}
+trainIndex <- createDataPartition(Carseats$Sales, p = 0.75, list = FALSE)
+```
+
+# Interpretation
+
+Here we use (reateDataPartition to create an index of 75 percent of the data set. This index will be used to separate the data into two parts: These two are Temp and Test and it has to be true. The p = 0. Temp = 75 percent... Test = 25 percent of the entire data set.
+
+# Partition the dataset
+```{r}
+Temp <- Carseats[trainIndex, ]   # ~300 records
+Test <- Carseats[-trainIndex, ]  # ~100 records
+```
+
+# Interpretation
+
+The Temp set contains about 300 records and will be utilized to perform additional splitting on the data set. The Test set comprises 100 records (25% of the initial data set) and will be employed for assessing the final model’s effectiveness.
+
+
+# Creating an index for 200 records from Temp
+```{r}
+trainIndexTemp <- createDataPartition(Temp$Sales, p = 200/nrow(Temp), list = FALSE)
+```
+
+# Interpretation
+
+Within the Temp dataset, we now create an index to further divide it into Training and Validation set. The Value p = 200/nrow(Temp) indicates that 200 records are required for the Training set and the rest of the records will make up the Validation set.
+
+
+# Partition Temp into Training and Validation sets
+```{r}
+Training <- Temp[trainIndexTemp, ]      # 200 records
+Validation <- Temp[-trainIndexTemp, ]   # 100 records
+
+```
+
+# Interpretation
+
+The Training set contains the data of 200 records and is employed for training the model of machine learning. The Validation set that contains 100 records is important in optimizing parameters of the model and evaluating the model on when trained to identify the cases of over fitting.
+
+# Checking the number of records in each set
+
+```{r}
+nrow(Training)   
+nrow(Validation) 
+nrow(Test)      
+```
+
+# Interpretation
+The Training data set contains 201 records, confirming it was correctly partitioned from the Temp data set for model training.
+
+The Validation data set contains 100 records, indicating that the remaining records in Temp were correctly allocated for model validation.
+
+The Test data set has 99 records, showing the initial partition of Carseats into Temp and Test was accurate for final model evaluation.
+

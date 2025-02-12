@@ -1,0 +1,393 @@
+---
+title: "FML Assignment 5"
+author: "Nishanth Gurujala"
+date: "2024-10-24"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+# Q1-A).... Effect of Normalization and Number of Clusters (k) on Clustering....
+
+# Normalization:
+
+Normalization adjusts the scale of the dataset features so that each feature contributes equally to the distance calculations in clustering algorithms. This is often achieved through methods like min-max scaling or z-score standardization.
+
+Scaling is a data preprocessing technique used to adjust the range and distribution of features in a dataset. In datasets where features have different units or ranges, scaling ensures that each feature contributes equally to the analysis, especially in distance-based models like clustering or machine learning algorithms that rely on metrics like Euclidean distance.
+
+impact/Effects 
+
+Improves Model Performance: If the features are of equal scales but do not have equal variance then those with large variance are likely to dominate the results of the model. This is countered by scaling where features are allowed to contribute in a consistent manner to distances, thus improving performance.
+
+Enhances Convergence: In some algorithms such as K-means, scaling can cause faster and more stable convergence that is, if the data is scaled to be more in line with the assumptions that the algorithms makes about the data.
+
+Better Clustering: In clustering, scaling results in more spherical shapes of clusters with approximately equal density which in turn improves the quality of clusters for the reason that separation introduced by scaling eliminates distortion of the data.
+
+Affects Interpretability: Scaled data aids in interpretation of model outcomes better as clusters or classifications depict real patterns in data instead of effects of unsuitable ranges of features.
+
+# Number of Clusters (k):
+
+Definition: In algorithms like K-means, the user specifies the number of clusters (k) to divide the dataset into. In other algorithms like DBSCAN, while the number of clusters isn’t explicitly defined, parameters like epsilon (ε) and minPts influence the resultant clusters.
+
+Choosing Optimal k:
+
+The disciplines that take the number of clusters depend on how the data is partitioned. If k is too small, clusters may be too broad including important differences that needs to be captured. If the value of k is too high, clusters may be too specific and meaningful groups that can be formed can be split.
+
+
+Effect: 
+
+The choice of K such that k directly determines the quality of clustering. Optimal k may simultaneously control between-cluster scatter and within-cluster dispersion, The optimal scenario aims to establish minimal intracluster variability at the highest intercluster differences. Possible techniques to determine the best K
+These k include the elbow method and silhouette analysis.
+
+conclusion : normalization makes all the features make an equal contribution to the clustering process thereby avoiding larger features dominate the whole process due to the size. This paper showed how the selection of the number of clusters (k) impacts on the capability of the clustering algorithm to model the data structure. It is therefore important to consider both factors in order to get reasonable and understandable clustering results.
+
+
+# Q1-B) ...Performing K-Means clustering to group the wines intoclusters based on their                          chemical attributes and your optimal k.....  
+
+# Loading libraries
+```{r}
+library(tidyverse)
+library(factoextra)
+```
+
+
+# Loading wines dataset
+```{r}
+wines <- read.csv("C:\\Users\\nisha\\Downloads\\wine-clustering.csv")
+```
+
+
+# Normalising the dataset
+```{r}
+wines.norm <- scale(wines)
+```
+
+# Interpretation
+
+The line wines.norm <- scale(wines) mean centers (scales) the wine dataset by subtracting the mean of each feature and dividing by the standard deviation to bring the values between 0 and 1. This is where normalization of the chemical attribute values is important because the values (e.g., Alcohol, Ash, Magnesium) are in different scales. Scaling brought scaling values for the features each ranging from 0 and 1 so that every feature has equal weight in K-means cluster calculations and does not allow attributes with a larger scale to distort the process. This makes it possible to distinguish rich and informative clusters solely based on patterns apparent in chemical measurements of the wine and independent on differences in measurement units.
+
+# Finding the optimal number of clusters using the Elbow Methods
+```{r}
+fviz_nbclust(wines.norm, kmeans, method = "wss") + 
+  ggtitle("Optimal Number of Clusters Using Elbow Method")
+
+```
+# Interpretation
+
+The command produces a plot for selecting the number of clusters for K-means. 
+In this plot, The ‘elbow’,indicates the level of flattening of the curve: this defines the number of clusters which is optimal. Before this value increase with the number of clusters increases the benefit of grouping and after this value does not increase. It allows us to select the correct number of clusters without complicating them in the grouping process.
+
+# Finding the optimal number of clusters using Silhouette Methods
+```{r}
+fviz_nbclust(wines.norm, kmeans, method = "silhouette") + 
+  ggtitle("Silhouette Method for Optimal k")
+```
+
+# Interpretation
+
+This command is used for finding the best number of clusters K using Silhouette Method
+
+The plot above tells us how well differentiated the clusters are. This ‘closer-to-zero’ is because, in general, ‘ a higher clustering tends to imply that the inter-cluster variance is larger and intra-cluster variance is smaller meaning that the samples inside the same cluster are more similar’. Thus, the observed K is chosen to be the one with the maximum silhouette coefficient for clear and significant clusters.
+
+# Setting the optimal k based on visual analysis (e.g., k = 3)
+
+```{r}
+set.seed(123)
+k <- 3 
+```
+
+# Interpretation
+
+The above instructs R to start K-means algorithm with a set seed value in order to give the same results over and over again. This approach will guarantee you the same clusters all the time, thus the results make the analysis replicate.
+
+The line k <- 3 is the value which set the number of cluster to 3 and therefore, the sample type of wine will grouped into 3 clusters based on given chemical property.
+
+# Performing K-Means clustering
+```{r}
+kmeans.wines <- kmeans(wines.norm, centers = k, nstart = 25)
+```
+
+# Interpretation
+
+This line performs K-Means clustering on the wine data normalized with the intention of clustering the samples into k clusters (here, 3). Here, we fixed nstart = 25 which in each iteration the algorithm starts from 25 trees, this maximize the best and stable value of samples grouping based on chemical properties. This step is crucial in maximizing the efficiency of the clustering process since a poor start basically sets the tone for the whole process.
+
+# Display cluster centers and sizes
+```{r}
+kmeans.wines$centers
+kmeans.wines$size
+```
+# interpretation
+
+This displays the centroid values of the model for each group of wines, meaning the average chemical value of wines in each group. These centroids make it easier understand the capture of the main attributes of each wines group, for instance high alcohol and low acidity wines.
+
+The command kmeans.wines$size provides the number of samples in each cluster is given. This would show us to what extent each group is well subscribed to or how rare each wine profile is in the data base.
+
+
+# Visualizing clusters
+```{r}
+fviz_cluster(kmeans.wines, data = wines.norm) + ggtitle("K-Means Clustering of Wine Data")
+```
+# Interpretation
+
+This command  creates a visual plot of the clusters formed by the K-Means algorithm.
+
+In this plot:
+
+Each point represents a wine sample, and points are colored according to their assigned cluster.
+
+The plot shows how well-separated or overlapping the clusters are, based on the wine's chemical characteristics.
+
+This helps in visually assessing the distinctiveness and distribution of clusters, making it easier to interpret patterns and similarities within each group of wines.
+
+# Q2-A)...Explain how the DBSCAN (Density-Based Spatial Clustering of Applicationswith Noise) algorithm differs from K-Means clustering, particularly in terms of  handling noise and outliers.....
+
+DBSCAN, which stands for Density-Based Spatial Clustering of Applications with Noise This clustering algorithm is quite different from K-Means clustering primarily in terms of noise and outliers. Here’s a detailed explanation of how these two algorithms differ:
+
+Basic Clustering Approach
+K-Means Clustering:
+
+Centroid-Based:
+
+# K-Means- 
+in its simplest form divides the databases into k clusters based on the mean of points also known as centroid. Every data point is grouped with the nearest centroid and the centroid of each group is updated until all centroids no longer change.
+
+Global Structure:
+
+K-Means bears the assumption that clusters are convex and isotropic, hence requires clusters to be more spherical and evenly distributed.
+
+# DBSCAN:
+
+Density-Based:
+
+DBSCAN define clusters as densely populated areas of objects separated by areas of low object density. The process of determining clusters of data points is done using the density distribution of the data that is present in a particular neighborhood.
+
+Core Points, Border Points, and Noise: 
+
+There divides points into the core points which are points that have minimum number of neighbor points, border points which are a point within the neighborhood of the core point but cannot be a core point since they are not so dense as well as the noise points which are points that do not belong to any cluster.
+
+# Handling Noise and Outliers
+
+# K-Means Clustering:
+
+Sensitive to Outliers: 
+
+K-means clustering is not robust, because it assigns membership to clusters by minimizing the distance from points to the centroids. A particular observation can greatly shift the centroid position and lead to a wrong classification of clusters.
+
+
+No Explicit Noise Handling:
+
+Actually, K-Means algorithm assumes that each data point belongs to some cluster, so outliers will be just assigned to the nearest cluster.
+
+
+# DBSCAN:
+
+Robust to Noise:
+
+Unlike other clustering techniques, DBSCAN can recognize and manage noise points as they are grouped as unclustered points. Also, core points are unaffected by noise points with regards to their clustering.
+
+Explicit Outlier Detection: 
+
+DBSCAN has the advantage that outliers are definite as noise points so the remaining clustered data remain neat and clean. On the other hand they can successfully skip over noise, which makes them more effective for real data sets which are often contaminated by noise.
+
+# Performance and Complexity
+
+# K-Means Clustering #
+
+# Efficiency:
+
+The major advantage of K-Means is that it is computationally cheap most of the time taking O(k * n) time. This is an (n⋅k⋅i) time complexity since they find the optimal clusters and new centroids for a given set of data points n, with k clusters and i iterations.
+
+Sensitivity to Initialization: The placement of initial centers is quite important and may influence the result set. Several runs with miscellaneous initializations may be required.
+
+# DBSCAN:
+
+Performance on Large Datasets: The performance depends on the selected parameters and density distribution of the analysed dataset within the context of DBSCAN. It typically runs in 
+The spatial indexing is O (n⋅log(n)) which makes it beneficial for large numbers of data points.
+
+Less Sensitive to Initialization: DBSCAN is free from the problem of choosing initial means which can make the algorithm unstable.
+
+# Conclusion
+
+Altogether, two methods demonstrated significant differences both in the way they work and in the way they included the noise and outliers into the clustering. Compared with other clustering algorithms, DBSCAN has its unique density-based method for finding clusters of any shapes and can completely minimize the impact of noise points and outliers by considering density reachability to be the factor to determine cluster centers. Compared to K-Means algorithm, K-Medoid is more appropriate to be applied in cases where all clusters should be spherical and concentric to each other, but it gets easily influenced by noise and outliers and hence may provide misleading solutions in case they are used.
+
+
+# Q2-B)...Assume k=3, apply DBSCAN to the wine dataset, and analyze the clustersformed. How do the parameters epsilon (ε) and minPts influence the clustering results?...
+
+# Loading libraries
+```{r}
+library(dbscan)
+library(fpc)
+library(factoextra)
+```
+
+# Loading the Wine Dataset
+```{r}
+wines <- read.csv("C:\\Users\\nisha\\Downloads\\wine-clustering.csv")
+```
+
+# Normalizing the dataset
+```{r}
+wines.norm <- scale(wines)
+```
+
+# Interpretation
+
+
+The line wines.norm <- scale(wines) mean centers (scales) the wine dataset by subtracting the mean of each feature and dividing by the standard deviation to bring the values between 0 and 1. This is where normalization of the chemical attribute values is important because the values (e.g., Alcohol, Ash, Magnesium) are in different scales. Scaling brought scaling values for the features each ranging from 0 and 1 so that every feature has equal weight in K-means cluster calculations and does not allow attributes with a larger scale to distort the process. This makes it possible to distinguish rich and informative clusters solely based on patterns apparent in chemical measurements of the wine and independent on differences in measurement units.
+
+# Finding the epsilon value using kNN distance plot
+```{r}
+kNNdistplot(wines.norm, k = 3)  
+abline(h = 0.5, col = "red") 
+```
+# Interpretation
+
+This plots the distances to the 3rd nearest neighbors of each data points in the wines.norm dataset and selects a value of epsilon (ϵ) for performing DBSCAN clustering. The abline(h = 0.5, col = "red") command places a red horizontal line at a value of 0.5 for the purpose of comparison to an epsilon threshold that may exist. The inflection point of the plot (the “elbow” of the graph) provides an epsilon value that differentiate between high density areas and low density nodes or noise that helps in determining the right parameters for DBSCAN.
+
+
+# Setting parameters for DBSCAN
+```{r}
+epsilon <- 0.5  
+minPts <- 3     
+```
+
+# Interpretation
+
+The Epsilon <- 0.5 is used to set the radius around a point where the other points qualify as density-reach-able nearby points if they are within this radius; minPts <- 3 is used to define the minimum number of points in the vicinity of the first point for the first point to be considered a core point. Combined, these parameters assist DBSCAN in the wine dataset in defining clusters as dense regions while avoiding cluster overlap and including much noise.
+
+
+# Clustering using DBSCAN
+```{r}
+DBscan.wine <- dbscan::dbscan(wines.norm, eps = epsilon, minPts = minPts)
+```
+
+# Interpretation
+
+The DBSCAN clustering to the wine data after normalizing it using the parameterization of epsilon = 0.5 and minimum points = 3. This command divides the dataset in to the cluster where each data point is differentiated based on density and is classified as an in-built cluster or noise. The resulting object DBscan.wine includes the information on which points were classified as noise and make the analysis of the wine samples features according to their chemical compositions possible.
+
+# Printing cluster results
+```{r}
+print(DBscan.wine)
+```
+# Interpretation
+
+The DBSCAN algorithm used in the wine dataset found only one cluster and the rest points(178 in number) as noise. This means no wine sample clustered a dense region within the parameters set as epsilon = 0.5 and minPts =3. The outcome implies that the chosen parameters may have to be fine-tuned accordingly so that potential clusters if they exist at all can be identified, again implying insufficiency of density of the underlying data set. In summary, the result implies that there is a need to consider further investigation on the parameter setting to obtain realistic clusters.
+
+
+
+# Plotting the clusters
+```{r}
+fviz_cluster(DBscan.wine, data = wines.norm, geom = "point") +
+  ggtitle("DBSCAN Clustering of Wine Dataset") +
+  theme_minimal()
+```
+
+# Interpretation
+
+The scatter plot diagram of the applied DBSCAN clustering for the wine dataset. In this plot, each point is a wine sample, but prior graphical results show all the points as noise; therefore, all the points are expected to be represented by a single color, meaning that none of them form a cluster. The repeatability of the points further supports the finding that none of these parameters may be adequately tuned with the chosen values of epsilon = 0.5, minPts = 3 to detect any meaningful clusters in the data set. Altogether, it reveals that it is difficult to detect clusters in the current layout of the network.
+
+#............................Compare K-Means and DBSCAN.................................
+
+# Q3)...Explain pros and cons of each of these two methods based on the outputs observed in the previous questions...
+
+
+# K-Means Clustering
+
+K-Means is an effective tool of clustering that organizes the set of citations on the basis of some selected clusters. k different clusters that minimize the variance within the groups. This is done through random selection of k centroids, then data points are grouped into the nearest centroid, and finally the centroids are recalculated on the basis of the mean of those data points. This procedure is continued until the centroids become fixed. While K-Means is good for big data, easy to implement, and needs prior definition of k, it is not robust to outliers and clusters that are not spherical.
+
+Pros:
+
+Efficiency: K-Means is very fast and is even more efficient when dealing with big data. The algorithm is effective on compact, spherical and equal size clusters because it built and optimizes a model based on the assumption that data is Euclidean.
+
+Ease of Interpretation: K-Means clusters are relatively easy to understand when graphed and when there are relatively large differences between clusters. The resulting clusters involve tight and loosely bounded conglomerations with central reference points known as centroids.
+
+Clear Separation: However, where clusters are compact and evenly dispersed (such as in spherical clusters), solutions determined by K-Means are clear, which is advantageous to this type of characteristic.
+
+
+Cons:
+
+Difficulty with Non-Spherical Clusters: K-Means is not very efficient when the clusters are of irregular sizes or shapes or asymmetrical. In the wine dataset, chemical properties could be grouped in clusters exhibiting these irregular characteristics and thus have lower accuracy.
+
+Sensitivity to Outliers: K-Means is sensitive to the outliers and noise as the algorithm gets developed here aims to minimize the squared distance to centroids. Outliers can misposition the centroid of a cluster which in turn leads to the formation of clusters that poorly describe the main clusters in the data set.
+
+Predefined Cluster Count (k): Another drawback of K-Means is that the user has to predetermine the number of clusters (k), this may produce incorrect results for some cases: if their real structure is different from k or if the clusters are not necessarily category-like.
+
+
+
+# DBSCAN Clustering
+
+DBSCAN (Density-Based Spatial Clustering of Applications with Noise) is a clustering technique that aims at identifying compact regions of points whilst assigning any remaining singleton point as noise. It requires two parameters: Epsilon (the measure of the maximum distance of a data point from its nearest neighbors to belong in the same cluster or neighborhood) and minPts (minimum number of data points which can join a cluster). The major strength of DBSCAN is that it is good at finding non-spherical cluster of any shape and of any size and it is less sensitive to noise data. However, it can have problems with various densities distributions clusters and depends on the chosen parameters.
+
+Pros:
+
+Ability to Handle Noise and Outliers: DBSCAN is designed in a way that can also allow for noise and outliers to be included into the noise points, which are not included in any cluster. This is helpful for datasets such as wine because strange chemical values might be seen occasionally.
+
+No Need to Specify k: DBSCAN unlike other clustering algorithms doesn’t necessary depend on the number of cluster to create (K). It works directly with density parameters (epsilon and minPts) to find clusters based to the distribution of the data which makes it useful for the dataset that did not have clear and pre-established cluster structures.
+
+Adaptability to Non-Spherical Clusters: DBSCAN is able to find clusters of varying densities, and thus can be applied to to datasets where the clusters of data points are not necessarily spherical or of roughly the same size. This is perfect if the wine dataset has clusters that include different structures and densities.
+
+Cons:
+
+Parameter Sensitivity: It is very influential by the parameters epsilon and minimum number of points. If these parameters are not selected properly, then DBSCAN may cluster merge, miss the existing clusters and label many points as noise.
+
+Difficulty with Varying Density Clusters: DBSCAN fits the premise clusters density should be fairly homogeneous on average. DBSCAN has an inherent problem dealing with clusters of different density as it may either under or over-cluster a given dataset, without regard to density fluctuations within it.
+
+Scalability: DBSCAN sometimes can be slow, especially on large high-dimensional data sets, as(coordinates) density has to be calculated around each point. This may be a problem in case when the analyzed dataset will increase in size considerably.
+
+
+
+#Summary
+
+K-Means is most effective for organized data which has clusters that are spherical shaped and clusters of nearly equal size. However, it is not noise tolerant and the number of clusters that must be specified is known as ‘k’.
+
+DBSCAN is adaptable for clusters of different shapes, second, it can handle noise and last but not least, you do not need to set the number k for DBSCAN. However, it calls for a fine-tuning procedure of eps and minPts, and has some difficulties with clusters of different densities or with very large databases.
+
+Apparently,  K-Means may be applied and useful for the datasets similar to the example while DBSCAN seems to be beneficial only in rather specific cases, when the characteristics of the dataset match some certain parameters.  the K-Means clusters   takes less number of iterations with increased convergence as the clusters are spherical and are separated by a large margin. Nonetheless,  it may sometimes fail when there are outliers in the data set. However, DBSCAN shows its potential when the clusters are geometrically irregular or have different densities, and when there are many noise points and outliers. Therefore, where the clusters are noisy, or irregular in shape, I prefer DBSCAN; while for simpler datasets, where the clusters can be assumed spherical, I find that for my requirements K-Means is faster to use.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

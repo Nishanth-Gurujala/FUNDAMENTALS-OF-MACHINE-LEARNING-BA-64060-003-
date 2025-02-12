@@ -1,0 +1,181 @@
+---
+title: "FML Assignment 1"
+author: "Nishath Gurujala"
+date: "2024-09-07"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Installing packages
+
+install.packages("dplyr")
+install.packages("tidyverse")
+install.packages("ggplot2")
+install.packages("psych")
+install.packages("tinytex")
+install.packages("readr")
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(psych)
+library(tinytex)
+library(readr)
+```
+
+
+# Importing the dataset
+```{r}
+data <- read.csv("C:\\Users\\nisha\\Downloads\\Churn_Data.csv")
+```
+
+
+# Display the first few rows of the dataset
+```{r}
+head(data)
+```
+# Interpretation
+
+The first few rows contain general information of the dataset which reveals the preliminary entries of all the variables. This is helpful in identifying the data when it was first received and the structure that it came in.
+
+# Display the last few rows of the dataset
+```{r}
+tail(data)
+```
+# Interpretation
+
+The last few rows of the dataset contain the last entries which show that the data has been recorded totally and without any break and hence contains all the relevant data.
+
+# Display the dimensions of the dataset (rows and columns)
+```{r}
+dim(data)
+```
+# Interpretation
+
+This dataset has number of rows equal to 1000 and number of columns equal to 9. This shows the number of observation and the total number of variable that was observed
+
+# Display the summary statistics of the dataset
+```{r}
+summary(data)
+```
+# Interpretation
+
+# Interpretation
+
+The generated data set highlights typical customer characteristics with average call failures and with medium variation of the subscription duration, data traffic, and voice traffic. Monthly charges and roaming use are also not standardized. The data suggests that half of the customers have discontinued use of the product, proving the concept of high customer attrition. The mean and median values offer general information about the customers’ activity level and utilization rates.
+
+
+# Display the structure of the dataset
+```{r}
+str(data)
+```
+
+# Interpretation
+
+the Structure holds data on 1000 customers ‘call failure rate, subscription period, usage of data and voice services, contact with customer service, type of contract, monthly charges, and roaming usage. It also shows us whether each customer has churned. From this data, it will be possible to understand the tendency of customer behavior, the causes of churn and results from varying factors on customer loyalty and satisfaction.
+
+
+# Calculate the mean of numeric columns
+```{r}
+colMeans(select_if(data, is.numeric), na.rm = TRUE)
+```
+# Interpretation
+
+New customer consumes more data and roaming communication compared to the former customer but the voice communication is less as compared to the former customer. ⁤⁤They also engage with the customer support frequently and also pay more monthly fees. ⁤⁤Although, their churn probability is lesser than the above mentioned previous customer. ' 
+
+# Calculate the median of numeric columns
+```{r}
+apply(select_if(data, is.numeric), 2, median, na.rm = TRUE)
+```
+# Interpretation
+
+This customer used a moderate amount of Data and Roaming, called Support few times and his Monthly charges were 56$. 91. They have churned meaning they have dropped out of the service. 
+
+# Mode function 
+```{r}
+Get_mode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+modes <- sapply(data, Get_mode)
+print(modes)
+```
+# Interpretation
+
+The Customers used the service  daily  without contacting the customer support, Irrespective of the  usage and monthly payments, they've decided to leave the service.
+
+# Check for missing values in the dataset
+```{r}
+colSums(is.na(data))
+```
+# Interpretation
+
+The missing value check helps to ensure the completeness of the data across all the columns and will highlight the sections where any data imputation is required.
+
+# Select relevant columns for analysis
+```{r}
+data_usage_churn <- data %>% select(DataUsage, Churn)
+```
+
+# Summary statistics for Data Usage based on Churn
+```{r}
+data_usage_summary <- data_usage_churn %>%
+  group_by(Churn) %>%
+  summarise(mean_data_usage = mean(DataUsage), 
+            median_data_usage = median(DataUsage), 
+            max_data_usage = max(DataUsage), 
+            min_data_usage = min(DataUsage))
+```
+
+
+# Output the summary table
+```{r}
+data_usage_summary
+```
+# Interpretation
+
+Upon reviewing the data, we observe that customers who left (churned, represented by 0) have an average data usage of about 5.15 GB, but with significant variability, indicating inconsistent usage patterns. In contrast, those who did not churn (represented by 1) show more stable usage, averaging around 5 GB with very little variation. Although the average data usage is slightly higher for those who left, the overlap and inconsistency suggest that data usage alone is not a reliable predictor of churn. To accurately identify churn behavior, it would be necessary to consider additional factors beyond just data usage.
+
+
+# Visualization of Data Usage vs. Churn
+```{r}
+ggplot(data, aes(x = as.factor(Churn), y = DataUsage)) +
+  geom_boxplot(fill = "skyblue") +
+  labs(title = "Data Usage vs. Churn", x = "Churn", y = "Data Usage (GB)") +
+  theme_minimal()
+```
+# Interpretation
+
+The box plot displays the data usage of churned and non-churned customers where churn shows the outcome of 1 and 0 respectively. Key observations include:
+
+Median Data Usage: It is also the duration the two groups spend within the network; the median being almost similar with both groups averaging at approximately 5 GB data usage.
+
+Interquartile Range (IQR): The IQR is pretty much the same indicating that the variation in data usage among the churned and non-churned customers is similar.
+
+Outliers: In both the groups there aren’t actually any large exceptions to the overall pattern which is data usage.
+
+Conclusion: Analyzing the boxplots, one can see that, probably, data usage can not be considered as the primary factor affecting customer churn, since both groups have rather similar median and shapes.
+
+
+# Apply log transformation to Monthly Charges
+```{r}
+data$log_MonthlyCharges <- log(data$MonthlyCharges)
+```
+
+
+# Visualization using ggplot
+```{r}
+ggplot(data, aes(x = log_MonthlyCharges)) +
+  geom_histogram(binwidth = 0.1, fill ="blue", color = "black") +
+  labs(title = "Distribution of Log-Transformed Monthly Charges", x = "Log of Monthly Charges", y = "Count") +
+  theme_minimal()
+```
+#Interpretation of the Histogram: 
+
+Another variable is monthly charges that has been transformed into logarithmic form.
+Monthly charges are transformed by taking the logarithm of each of them in order to decrease skewness and also make data more balanced. The majority of the customers falls within the log range of 3 out of 10. 5 to 4. 5, to which are associated monthly charges of between $33. 12 and $90. 02. A peak is identified at the log level of 4. The transformation scales the data to a normal range so that the data is fit for general use like the predictive tests like the correlation between monthly charges and churn.

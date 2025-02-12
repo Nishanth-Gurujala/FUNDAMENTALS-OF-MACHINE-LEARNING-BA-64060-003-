@@ -1,0 +1,233 @@
+---
+title: "FML Assignment 3"
+author: "Nishanth Gurujala"
+date: "2024-09-23"
+output:
+  html_document: default
+  pdf_document: default
+---
+# Installing necessary packages
+install.packages("class")
+install.packages("caret")
+install.packages("readr")
+install.packages("e1071")
+
+# Loading necessary libraries
+```{r}
+library(class)
+library(caret)
+library(readr)
+library(e1071)
+
+```
+
+# Step 1: Reading the CSV file
+```{r}
+Vehicles_data <- read.csv("C:\\Users\\nisha\\Downloads\\Vehicles_Sales.csv")
+
+```
+
+# Step 2: Data Preparation
+# Droping the YEAR_ID and PRODUCTLINE columns
+```{r}
+Vehicles_data <- Vehicles_data[ , -c(9,10)]
+
+```
+# Interpretation
+
+Before processing with the given data set, some of the columns which are irrelevant are to be removed. The columns YEAR_ID and PRODUCTLINE are chosen to be omitted since they are not relevant to the k-NN model; they are at position 9 and 10, respectively. As for the DEALSIZE, the size of the deals are categorized as small, medium or a large one, the DATA 100 column is, therefore, transformed into a factor variable during the modeling process. Finally, to make use of the values in the DEALSIZE column for k-NN, dummy variables are created using the dummyVars() in caret package that converts categorical data into numerical for usage in k-NN.
+
+# Converting DEALSIZE to factor
+```{r}
+Vehicles_data$DEALSIZE <- as.factor(Vehicles_data$DEALSIZE)
+
+```
+# Interpretation
+
+Using training data set (50%), validating data set (30%), and testing data set (20%). By partitioning the data, using create = 0.7, setting a random seed with set.seed(123) ensures that it is reproducible. The createDataPartition() function is used for the splitting of the data while preserving the distribution of the target variable, STATUS. The training dataset is deployed in the development of the model while the validation dataset comes more handy for optimizing the parameters set.
+
+
+
+# Creating dummy variables for DEALSIZE
+```{r}
+groups <- dummyVars(~., data = Vehicles_data)
+Vehicles_data <- as.data.frame(predict(groups, Vehicles_data))
+
+```
+# Interpretation
+
+The following sets of code converts the categorical variables in the given `Vehicles_data` dataset into dummy variables. The `dummyVars()` function; detects all categorical predictors and creates a blueprint of how to create binary column variables where each cell = 0 or 1 depending on the category of the predictor. The `predict()` function, then, applies this transformation on the dataset which leads to a brand new dataframe containing only numbers. This is important in case most of the machine learning algorithms such as k-NN require numeric data for purposes of computation.
+
+# Step 3: Data Partition
+# Setting seed for reproducibility
+```{r}
+set.seed(123)
+```
+
+# Interpretation
+
+this function  is used to ensure that any random numbers generated are the same every time the code is executed
+
+# Partitioning the data (50% training, 30% validation, 20% testing)
+```{r}
+trainIndex <- createDataPartition(Vehicles_data$STATUS, p = 0.5, list = FALSE)
+train.df <- Vehicles_data[trainIndex, ]
+temp.df <- Vehicles_data[-trainIndex, ]
+
+validIndex <- createDataPartition(temp.df$STATUS, p = 0.3, list = FALSE)  # 30% for validation
+valid.df <- temp.df[validIndex, ]
+test.df <- temp.df[-validIndex, ]
+```
+
+# Interpretation
+
+The Vehicles_data dataset is divided into training, validation, and testing sets in this section of code. In order to maintain the distribution of the target variable, STATUS, 50% of the data are first randomly selected for the training set using the createDataPartition() function. The remainder of the data is saved in temp.df, which is further split into two sets: the testing set comprises 40% of this temporary dataset and the validation set comprises 60% of it. This methodical technique makes it possible to properly train, validate, and test the model, which aids in efficiently evaluating the model's performance.
+
+
+# Step 4: Normalize the datasets
+# Note: Exclude the 6th variable STATUS (which is the target variable) from normalization
+```{r}
+train.norm.df <- train.df[, -6] 
+valid.norm.df <- valid.df[, -6]
+test.norm.df <- test.df[, -6]
+```
+
+# Interpretation
+
+This code snippet helps the normalization process focus solely on the feature variables by removing the 6th column (STATUS) from the training, validation, and testing datasets. The k-NN algorithm may then examine the relationship between these characteristics and the target variable without being altered by the labels because only the independent variables are scaled as a result.
+
+# Normalizing the training data
+```{r}
+norm.values <- preProcess(train.df[, -6], method = c("center", "scale"))
+train.norm.df <- predict(norm.values, train.df[, -6])
+valid.norm.df <- predict(norm.values, valid.df[, -6])
+test.norm.df <- predict(norm.values, test.df[, -6])
+```
+
+# Interpretation
+
+To ensure that all the features contribute equally in this k-NN algorithm, this code snippet also normalize the training, validation, and test data. The preProcess() method creates a normalization model for all the columns except the target variable STATUS through scaling it using standard deviation and also centering it using the mean. For the same reason after data normalization these scales are used by the predict() method and the distance computations done in it are relevant.
+
+# STATUS back to the normalized data
+```{r}
+train.norm.df$STATUS <- train.df$STATUS
+valid.norm.df$STATUS <- valid.df$STATUS
+test.norm.df$STATUS <- test.df$STATUS
+```
+
+# Interpretation
+This code re-adds the `STATUS` target variable to the normalized training, validation, and testing datasets, ensuring that class labels are available for model evaluation and classification tasks.
+
+# Step 5: Perform k-NN Classification for the given Vehicle
+# Given Vehicle details
+```{r}
+new_vehicle <- data.frame(
+  ORDERNUMBER = 10322,
+  QUANTITYORDERED = 50,
+  PRICEEACH = 100,
+  ORDERLINENUMBER = 6,
+  SALES = 12536.5,
+  QTR_ID = 4,
+  MONTH_ID = 11,
+  MSRP = 127,
+  DEALSIZE.Large = 1,
+  DEALSIZE.Small = 0,
+  DEALSIZE.Medium = 0)
+```
+
+# Interpretation
+
+The new_vehicle is a dataframe contained data about a particular vehicle order which is of exclusive order type. The combined order has an ORDERNUMBER of 10322 and is made up of 50 units at 100 each thus giving a value of 12,536.5. The order is considered a large order as indicated by theategorical variable DEALSIZE.Large being equal to 1. This format of organization can then be sub divided for classification and used in higher level machine learning compartmentalization.
+
+
+# Normalizing the new vehicle data
+```{r}
+new_vehicle.norm <- predict(norm.values, new_vehicle)
+
+```
+
+# Interpretation
+
+new_vehicle.norm <- predict(norm.values, new_vehicle) standarize the new vehicle’s features using the scaling parameters from feature values of the training dataset. This helps in standardizing the new vehicle’s attributes to the scale used when classifying it’s the k-NN classification to allow simple comparisons and predictions.
+
+
+# k-NN classification (k = 1)
+
+```{r}
+knn_pred <- knn(train = train.norm.df[, -6], test = new_vehicle.norm, cl = train.norm.df$STATUS, k = 1)
+```
+
+# Output of the prediction
+
+```{r}
+knn_pred
+```
+# Interpretation
+
+The use of status new vehicle classification by the k-Nearest Neighbours (k-NN) classification where Sid code knn_pred <- knn(train = train.norm.df[, -6], test = new_vehicle.norm, cl = train.norm.df$STATUS, k = 1) has been conducted. The absolute deviation is calculated using the normalized training data sets apart from the target that is used to look for the closest match to the new vehicle normalized data. Here, k=1 hence the prediction is made by looking at the status of this single nearest neighbor which is stored under the variable knn_pred.
+
+
+# Finding the best k by calculating accuracy
+# Creating a dataframe to store accuracy for each k
+```{r}
+accuracy.df <- data.frame(k = seq(1, 15, 1), overallaccuracy = rep(0, 15))
+
+```
+# Interpretation
+
+The code giving the structure of accuracy.df <- data.frame(k = seq(1, 15, 1), overallaccuracy = rep(0, 15)) sets up a dataframe called accuracy.df where the outcomes of the executes of the script k-NN classification will be lodged. It includes an empty bar for k values from 1 to 15, and another bar for ‘overall accuracy’ which is filled with zeros at the start. This structure makes it possible to analyze the performance of the k-NN model as it is tweaked to different k value.
+
+# Looping through k values from 1 to 15
+```{r}
+for (i in 1:15) {
+  # Applying k-NN classification for the validation set
+  knn_pred <- knn(train = train.norm.df, test = valid.norm.df, cl = train.df$STATUS, k = i)
+  
+  # Calculating confusion matrix 
+  confusion <- confusionMatrix(knn_pred, as.factor(valid.df$STATUS))
+  
+  # Storing the accuracy in the dataframe
+  accuracy.df$overallaccuracy[i] <- confusion$overall['Accuracy']
+}
+
+# Printing the confusion matrix for the validation set
+print(confusion)
+```
+
+# Interpretation
+
+For k, the code starts from one and goes up to 15 in search of the k-NN classification of the samples within the validation set. It applies class label prediction on the normalized training data and applies confusion matrix analysis on the performance of the model. Each of the prediction is then extracted and recorded in the accuracy.df which allows the determination of the best k value that would give the best accuracy for the model.
+
+# Finding the best k (the one with the highest accuracy)
+```{r}
+best_k <- accuracy.df[which.max(accuracy.df$overallaccuracy), ]
+print(best_k)
+```
+
+# Interpretation
+
+This identifies the best k value for the k-NN classification by the use of k-NN classification in selecting the k value that gives the highest value in accuracy.df. The which.max() function defines the position of the maximum accuracy, so the k value is saved in the best_k variable and then printed. In the previous loop, accuracy for several values of k is computed and saved into the dataframe so that it is possible to make better assessment on the performance of the model and obtain the highest accurate prediction.
+
+The accuracy rate is 99%
+
+```{r}
+knn_pred_test <- knn(train = train.norm.df, test = test.norm.df, cl = train.df$STATUS, k = best_k$k)
+
+# Calculating confusion matrix for the test set
+confusion_test <- confusionMatrix(knn_pred_test, as.factor(test.df$STATUS))
+
+# Printing the confusion matrix for the test set
+print(confusion_test)
+
+```
+# Ploting the accuracy against k values
+```{r}
+plot(accuracy.df$k, accuracy.df$overallaccuracy, type = 'b', col = 'blue',
+     xlab = 'k Value', ylab = 'Accuracy', main = 'Accuracy vs. k Value')
+
+```
+
+
+# Interpretation
+
+The plot depicts how k changes with the accuracy, of k-NN with regards to the validation data set or the test data set. On the horizontal scale, the values of the k parameter are given, on the vertical scale – percentages of accuracy. The point of maximum on the accuracy curve shows that k value may be good for the selected model. In conclusion, this visualization helps in determining the impression that comes with the selection of k about the performance of the model chosen.

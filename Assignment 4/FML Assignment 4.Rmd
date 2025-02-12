@@ -1,0 +1,275 @@
+---
+title: "FML Assignment 4"
+author: "Harshini Ragiri"
+date: "2024-10-15"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown ##
+
+# Loading necessary libraries
+```{r}
+library(caret)      
+library(e1071) 
+library(tinytex) 
+library(dplyr)      
+
+```
+
+# Loading the dataset
+```{r}
+Heart.disease <- read.csv("C:\\Users\\nisha\\Downloads\\Heart_disease.csv")
+```
+
+
+# Inspecting the first few rows of the dataset to understand its structure
+```{r}
+head(Heart.disease)
+```
+# Interpretatoin
+
+The above code shows the first six records of data, giving a general overview of the type of data and parameters such as age, gender, chest pain type, blood pressure, cholesterol. 
+
+# Creating the "Target" dummy variable based on MAX_HeartRate
+```{r}
+Heart.disease <- Heart.disease %>%
+  mutate(Target = factor(ifelse(MAX_HeartRate > 170, "Yes", "No")))
+```
+
+# Interpretation
+
+The following code adds a new category variable to the Heart_disease collection named Target. It labels 'Yes' if MAX_HeartRate reaches 170, and 'No' otherwise, suggesting a high risk of developing heart disease.
+
+
+# Creating the 'BP_New' dummy variable
+```{r}
+Heart.disease <- Heart.disease %>%
+  mutate(BP_New = factor(ifelse(Blood_Pressure > 120, "Yes", "No")))
+
+```
+
+# Interpretation
+
+This code generates a new categorical variable known as `BP_New` in the data-set of . It labels “Yes” if Blood_Pressure>120 and “No” otherwise meaning high blood pressure is present.
+
+# Checking the levels of the Target variable
+```{r}
+print(levels(Heart.disease$Target))
+```
+
+# Baseline prediction: Most frequent class in the dataset
+```{r}
+Target_table <- table(Heart.disease$Target)
+print(Target_table)
+```
+# Interpretation
+
+This creates a Target_table that contains the amount of times any of the levels in the Target variable are repeated. This will show us the number of individuals who are having a higher risk of heart disease of "Yes" compared to those labeled as "No".
+
+
+# Prediction should be the majority class
+```{r}
+baseline_prediction <- names(Target_table)[which.max(Target_table)]
+print(paste("Baseline prediction for heart disease:", baseline_prediction))
+
+```
+
+# Select the first 30 records
+```{r}
+Heart.disease30 <- Heart.disease[1:30, c("Target", "BP_New", "chest_pain_type")]
+
+```
+
+# Interpretation
+
+This generates a new dataframe called Heart_disease30 and extracts the first 30 data points from the dataset. It specifically selects three columns: 'Target', 'BP_New', and 'chest_pain_type'. This subset will incorporate further analyses of these variables, such as determining the likelihood of an element in relation to the illness prognosis of the human heart.
+
+# Creating Object 1 and Object 2, along with printing Object 1 and 2
+```{r}
+Object1 <- ftable(Heart.disease30)
+print(Object1)
+```
+
+# Interpretation
+
+The Object1 is a frequency table for the first 30 records of Heart_disease presenting the count of the variability of “Target,” “BP_New,” and “chest_pain_type.” This table shows an association between presence of heart disease and the predictors.
+
+```{r}
+Object2 <- ftable(Heart.disease30[, -1])
+print(Object2)
+```
+
+# Interpretation
+
+This generates a frequency table for the basic Object 2 that only includes the first 30 records of the dataset, including the variables "BP_New" and "chest_pain_type", but completely ignores the "Target" variable. This table depicts the raw frequencies of various versions of these two predictors, which is valuable for understanding them and their potential link. 
+
+
+# Calculate Probability Outcomes for the four combinations
+```{r}
+P1 = Object1[3, 1] / Object2[1, 1]  
+P2 = Object1[4, 1] / Object2[2, 1]  
+P3 = Object1[3, 2] / Object2[1, 2]  
+P4 = Object1[4, 2] / Object2[2, 2]  
+
+```
+
+# Interpretation
+
+This code computes four probabilities depending on the frequency of combinations in the dataset:
+
+P1: Probability of heart disease ("Yes"), blood pressure ("No"), and chest pain type 0.
+P2: Probability of no heart disease ("No") when blood pressure is "Yes" and chest discomfort type is 0.
+P3: Probability of not having heart disease with blood pressure "No" and chest discomfort type 1.
+P4: Heart disease risk with blood pressure "Yes" and chest discomfort type 1.
+# Display calculated probabilities for the four combinations
+```{r}
+
+```
+
+
+# Probability calculations for classification
+```{r}
+Probability_Target <- rep(0, 30)
+for (i in 1:30) {
+  if (Heart.disease30$BP_New[i] == "Yes") {
+    if (Heart.disease30$chest_pain_type[i] == 0) {
+      Probability_Target[i] = P1
+    } else if (Heart.disease30$chest_pain_type[i] == 1) {
+      Probability_Target[i] = P3
+    }
+  } else {
+    if (Heart.disease30$chest_pain_type[i] == 0) {
+      Probability_Target[i] = P2
+    } else if (Heart.disease30$chest_pain_type[i] == 1) {
+      Probability_Target[i] = P4
+    }
+  }
+}
+
+Heart.disease30$Probability_Target <- Probability_Target
+Heart.disease30$Pred_Probability <- ifelse(Heart.disease30$Probability_Target > 0.5, "Yes", "No")
+```
+
+
+# Interpretation
+
+In this code, a vector called Probability_Target is defined to store a projected probability for each of the set's first 30 records. The likelihood of heart disease was calculated for each record using the values obtained from BP_New and chest_pain_type, and the loop control variable was increased. Probability_Target is assigned the relevant probabilities P1, P2, P3, and P4 based on these circumstances. Finally, a new column called Pred_Probability is created, and entries are sorted as "Yes" if the likelihood is greater than 0.5, otherwise "No".
+
+
+# Print the predictions for the first 30 records
+```{r}
+print(Heart.disease30[, c("Target", "Pred_Probability")])
+```
+
+# Interpretation
+
+
+This outputs the number of real targets intended at heart disease rates as well as the anticipated likelihood for the first 30 records in the data set. This comparison is important to examine how well the model is doing to forecast a particular event when compared to the actual outcomes
+
+# ---- Q2c: Manual Calculation of Naive Bayes Probability ----
+# Manual Naive Bayes calculation for BP_New = Yes and chest_pain_type = 1
+```{r}
+count_bp_yes_cp_1 <- nrow(Heart.disease30 %>% filter(BP_New == "Yes", chest_pain_type == 1))
+count_bp_yes <- nrow(Heart.disease30 %>% filter(BP_New == "Yes"))
+count_cp_1 <- nrow(Heart.disease30 %>% filter(chest_pain_type == 1))
+count_total <- nrow(Heart.disease30)
+
+```
+
+# Interpretation
+This will count the following among the dataset's first 30 rows.
+
+count_bp_yes_cp_1: The number of cases in which blood pressure is "Yes" and the kind of chest pain is 1.
+count_bp_yes: The total number of occasions where blood pressure is "Yes".
+count_cp_1: The total number of occasions when the chest pain type is one.
+count_total: The total number of records (30) being examined.
+
+# Prior probabilities
+```{r}
+prior_target_yes <- sum(Heart.disease30$Target == "Yes") / count_total
+prior_bp_yes <- count_bp_yes / count_total
+prior_cp_1 <- count_cp_1 / count_total
+```
+
+
+# Likelihood (P(chest_pain_type=1 | BP_New=Yes))
+```{r}
+likelihood_cp_1_given_bp_yes <- count_bp_yes_cp_1 / count_bp_yes
+
+```
+
+# Posterior (Bayes rule)
+```{r}
+posterior_prob <- (likelihood_cp_1_given_bp_yes * prior_target_yes) / prior_bp_yes
+print(paste("Manual Naive Bayes probability for BP_New = Yes and chest_pain_type = 1:", posterior_prob))
+```
+# Interpretation
+
+This code assesses the risk of having heart disease if one's blood pressure is high ("Yes") and the chest pain kind is 1. It combines the likelihood of experiencing chest discomfort type 1 with high blood pressure and the overall likelihood of having a cardiac condition. Finally, the probability indicates the chance of having heart disease under these settings.
+
+
+# ---- Q3: Full Dataset Analysis ----
+
+# Splitting the data into 60% training and 40% validation
+```{r}
+set.seed(123) # for reproducibility
+train.index <- sample(row.names(Heart.disease), 0.6 * dim(Heart.disease)[1])
+valid.index <- setdiff(row.names(Heart.disease), train.index)
+train.df <- Heart.disease[train.index, ]
+valid.df <- Heart.disease[valid.index, ]
+```
+
+# Interpretation
+
+This code divides the dataset into two parts, 60% for training and 40% for validation. Creates a training set using the sample function and the remaining indices for the model's validation set.
+
+# Train Naive Bayes Model
+```{r}
+nb_model <- naiveBayes(Target ~ chest_pain_type + BP_New, data = train.df)
+```
+
+# Interpretation
+
+This line of code builds a Naive Bayes classifier (nb_model) based on the training data included in the variable train.df with Target variable which will mean heart disease pointing at chest_pain_type and BP_New. They make a clear connection of these predictors to the target outcome in order to classify them.
+
+# Predictions for training set
+```{r}
+train_pred <- predict(nb_model, train.df)
+```
+
+
+# Convert train_pred to factor with levels
+```{r}
+train_pred <- factor(train_pred, levels = levels(Heart.disease$Target))
+```
+
+
+# Confusion Matrix for training set
+```{r}
+conf_matrix1 <- confusionMatrix(train_pred, train.df$Target, positive = 'Yes')
+print(conf_matrix1)
+```
+
+# Interpretation
+
+This computes the confusion matrix, conf_matrix1, of the train predictions, train_pred, based on the site labels in train.df. This matrix outlines outcomes of positives that are true and false positives, and negatives that are true and false negatives, by assessing accuracy and other parameters, mainly the positive category or ''Yes.''
+
+# Validate the model on the validation set
+```{r}
+valid_pred <- predict(nb_model, valid.df)
+valid_pred <- factor(valid_pred, levels = levels(Heart.disease$Target))
+
+```
+
+# Confusion Matrix for validation set
+```{r}
+conf_matrix_valid <- confusionMatrix(valid_pred, valid.df$Target, positive = 'Yes')
+print(conf_matrix_valid)
+```
+# Interpretation
+
+The validation predictions' confusion matrix on variable valid_pred compared to the real target variable in valid.df. This matrix displays the numerical outcomes of the model applied to the unseen data, assessing the proportion of very accurate positive, negative, and wrong predictions. It enables assessing the model's effectiveness in terms of ranking complications, accuracy, precision, memory, etc., which can provide insight into the viability and quality of diagnosing cardiac sickness.
