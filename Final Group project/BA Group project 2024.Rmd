@@ -1,0 +1,568 @@
+---
+title: "BA Group Project "
+author: "Nishanth Gurujala, Sathvika Vegiraju, Harshini Ragiri, Shreya Shalini Buyyana"
+date: "2024-11-26"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+# Predicting Customer Churn: Data-Driven Insights for Retention Strategies at ABC Wireless Inc.
+
+## Loading Libraries
+
+```{r}
+library(tidyverse)
+library(caret)
+library(randomForest)
+library(ROCR)
+library(DMwR2) # For SMOTE
+library(e1071)
+library(pROC)
+library(rpart)
+library(rattle) # For fancyRpartPlot
+library(corrplot)
+```
+
+# Loading Dataset
+
+```{r}
+data <- read.csv("C:\\Users\\nisha\\Downloads\\Churn_Train.csv")
+
+
+```
+
+# Data Exploration
+
+```{r}
+summary(data)
+str(data)
+
+```
+
+# Interpretation
+
+This above tells us about the customer state, account length, area code, total day minutes, total day calls and total day charge; the database includes 3333 observations and 20 independent variables. The basic means used daily range from 0 to 59.64 minutes with an average of 418.9 minutes on the key variables. Similar to evening use, night use is also reported by only a minority of the residents and more frequently among the young consumers. Qualitative variables like total_eve_minutes, data_missing, present in many columns, has 301 null values and account_length has 501 null values. The target variable referred to as churn lists the customers’ decision as to whether to remain or depart, thus supporting churn prediction modeling.
+
+# Converting Categorical Variables to Factors
+
+```{r}
+data$churn <- factor(data$churn, levels = c("no", "yes"))
+data$international_plan <- factor(data$international_plan, levels = c("no", "yes"))
+data$voice_mail_plan <- factor(data$voice_mail_plan, levels = c("no", "yes"))
+
+```
+
+# Interpretation
+
+This is code to factorize the churn variable and the other two features international_plan ad voice_mail_plan into factors with level. Possible levels for each variable number are “No” and “Yes,” and “No” may be considered the baseline. This transformation is useful in the determination of the correct approach to management of categorical data in statistical modeling and machine learning algorithms.
+
+# Imputing Missing Values
+
+```{r}
+calculate_mode <- function(x) {
+  uniqx <- unique(x)
+  uniqx[which.max(tabulate(match(x, uniqx)))]
+}
+
+data[sapply(data, is.numeric)] <- lapply(data[sapply(data, is.numeric)], function(x) ifelse(is.na(x), 0, x))
+data[sapply(data, is.factor)] <- lapply(data[sapply(data, is.factor)], function(x) {
+  x[is.na(x)] <- calculate_mode(x)
+  x
+})
+```
+
+# Interpretation
+
+Missing values are another famous data preparation problem, and this code solves it by applying different imputation techniques for numeric and factor variables. Sparse data is also handled here: For numeric columns where a missing value is denoted by an NA, 0 is inserted in its place. For the factor columns missing data is imputed by the mode of the respective factor column. The calculate_mode function is used to return the most frequent value since it first finds them from the unique values and then selects the one which is most common. This avoids situations wherein missing values may dilute the data or the algorithm that seeks to work on the data would not understand what to do with the missing values.
+
+# Visualizing Churn Distribution
+
+```{r}
+ggplot(data, aes(x = churn)) +
+  geom_bar(fill = "steelblue") +
+  theme_minimal() +
+  labs(title = "Churn Distribution", x = "Churn", y = "Count")
+```
+
+# Interpretation
+
+The bar chart looks at the percentage of customer churn in customer data set. From the results depicted above, the majority of customers have not churn, as epitomized by the bigger bar for no churn more than the 2000+. On the other hand, there are far fewer customers that have churned on the binary classification (yes) which indicate that this is an imbalanced data set where the default rate is considerably low as compared to the non-default rate. This situation may need some form of tweakage, which could include a use of techniques such as oversampling or undersampling in order to reducebias in the analytical models used in predictive analytics.
+
+# Calculating the correlation matrix
+
+```{r}
+numeric_vars <- data[, sapply(data, is.numeric)]
+
+# Calculate the correlation matrix
+correlation_matrix <- cor(numeric_vars, use = "complete.obs")
+
+# Plot the correlation matrix
+corrplot(correlation_matrix, method = "circle", type = "lower", tl.cex = 0.8)
+```
+
+# Partitioning Data
+
+```{r}
+set.seed(123)
+trainIndex <- createDataPartition(data$churn, p = 0.8, list = FALSE)
+train <- data[trainIndex, ]
+test <- data[-trainIndex, ]
+
+```
+
+# Interpretation
+
+This code is used when building models to divide the dataset into a training data and test data set. The `set.seed(123)` is used to make it easier to replicate set of random numbers generated. Using the `createDataPartition` function from the `caret` package, the data is first split into training and testing sets at 80%-20% respectively; thus creating the `train` and `test` variables. The partition is done with reference to the variable \`churn’ so that both data sets developed can contain the same number of churn customers and non-churn customers. This is important to keep churn and non-churn cases balanced in both the sets and not skewed by drop off.
+
+# Training Models
+
+# Logistic Regression Model
+
+
+```{r}
+set.seed(1)
+
+logistic_model <- train(
+  churn ~ .,
+  data = train,
+  method = "glm",
+  family = "binomial",
+  trControl = trainControl(method = "cv", number = 5, classProbs = TRUE, summaryFunction = twoClassSummary),
+  metric = "ROC"
+)
+# Print Logistic Regression Summary
+summary(logistic_model)
+
+# Evaluate Logistic Regression Model
+logistic_predictions <- predict(logistic_model, newdata = test)
+
+# Confusion Matrix
+logistic_cm <- confusionMatrix(logistic_predictions, test$churn)
+print(logistic_cm)
+
+# ROC and AUC
+logistic_probs <- predict(logistic_model, newdata = test, type = "prob")
+logistic_roc <- roc(test$churn, logistic_probs[, 2])
+plot(logistic_roc, col = "red", main = "ROC Curve - Logistic Regression")
+cat("Logistic Regression AUC: ", auc(logistic_roc))
+
+```
+
+# Interpretation
+
+Accuracy (86.64%): The model uses the accuracy parameter that ranks to the level of 87% in the ability to calculate if a certain customer will churn or not. This is not a bad outcome and we can say that the results are satisfactory, however this set of data gives a partial picture of what happened.
+
+Sensitivity (97.02%): When it comes to the accuracy of the model with regard to capturing customers who will churn the results are excellent, as it correctly identifies 97 percent of them. This is really important because we don’t want to lose a lot of customers that are right on the edge of walking out.
+
+Specificity (25.00%): Predicting non churners pose a lot of problems to the model being correct only 25% of the time. This means that it may identify those who are not likely to churn as churners most of the time, As a result, telecommunications firms have to wrestle with two major bad choices in managing customer turnover.
+
+Positive Predictive Value (88.48%): This true churn prediction means that the model is correct 88 percent of the time when it claims a customer is about to churn. Therefore, it tends to be suitable for use in making prediction concerning the churners.
+
+Negative Predictive Value (58.54%): Even when the model is predicting no churn, it is only right 58 percent of the time. What this entails is that the model is at some point making a call that customers will not churn when indeed they are going to do so.
+
+Prevalence (85.59%): A time series analysis shows that most of the customers in the dataset are actually non-churners hence the model is working with an unfair ratio of churn and non-churn customers.
+
+Detection Rate (83.03%): The model is able to assess the churn with a presicion of 83%. In other words, they are good enough when we are trying to identify customers who are most likely to churn.
+
+Balanced Accuracy (61.01%): This figure gives both churner and non-churner that has the model’s performance and what can be said is that it is slightly lower and can be tweaked to better predict churners and non-churners equally.
+
+AUC (0.78): As shown in Table 4, the model’s discriminant capability is relatively high, with the G overscore of 0.78, in the context of churners versus non-churners. This is actually an indication that the model is fairly effective.
+
+
+
+# Decision Tree Model
+
+```{r}
+# Train Decision Tree
+set.seed(2)
+tree_model <- rpart(churn ~ ., data = train, method = "class")
+
+```
+
+# Plotting the Decision Tree
+
+```{r}
+# Visualize Decision Tree
+fancyRpartPlot(tree_model, main = "Decision Tree Visualization")
+
+```
+
+# Making Predictions
+
+```{r}
+# Generate class predictions
+tree_predictions <- predict(tree_model, newdata = test, type = "class")
+
+# Generate probabilities for the ROC curve
+tree_probs <- predict(tree_model, newdata = test, type = "prob")[, 2]
+
+```
+
+# Evaluate Model
+
+```{r}
+# Confusion Matrix
+tree_cm <- confusionMatrix(tree_predictions, test$churn, positive = "yes")
+print(tree_cm)
+
+# ROC Curve and AUC
+tree_roc <- roc(test$churn, tree_probs)
+plot(tree_roc, col = "green", main = "ROC Curve - Decision Tree")
+cat("Decision Tree AUC: ", auc(tree_roc))
+
+```
+
+# Interpretation
+
+1. Accuracy (92.49%):
+
+The model is correct about 92.5% of the time in predicting whether a customer will churn or not. This is very good overall accuracy.
+
+2. Sensitivity (63.54%):
+
+The model correctly predicts 63.5% of the customers who actually will churn. This is decent, but there’s room to improve in catching more churners.
+
+3. Specificity (97.37%):
+
+The model is really good at predicting customers who will not churn, getting it right 97.4% of the time. This means it rarely makes mistakes in predicting non-churners.
+
+4. Positive Predictive Value (80.26%):
+
+When the model predicts that a customer will churn, it’s right 80.3% of the time. This means that the model is fairly reliable when it says a customer will churn.
+
+5. Negative Predictive Value (94.07%):
+
+When the model predicts that a customer will not churn, it’s right 94.1% of the time. This is excellent, meaning the model is very accurate at predicting non-churners.
+
+6. Prevalence (14.41%):
+
+Only about 14.4% of the customers actually churn. This means there are fewer churners, so it’s harder for the model to find them.
+
+7. Detection Rate (9.16%):
+
+The model correctly predicts churn in 9.16% of all customers. Since only a small portion of customers churn, this is a reasonable result.
+
+8. Balanced Accuracy (80.46%):
+
+The model is good at balancing its predictions for both churners and non-churners, with an overall balanced accuracy of 80.5%.
+
+9. AUC (0.88):
+
+The model is very good at distinguishing between churners and non-churners, with an AUC of 0.88, which is excellent.
+
+# Random Forest Model
+
+```{r}
+
+set.seed(3)
+
+# Defining the tuning grid for Random Forest
+rf_grid <- expand.grid(mtry = c(2, 4, 6, 8))
+```
+
+```{r}
+rf_control <- trainControl(method = "cv", number = 5, classProbs = TRUE, summaryFunction = twoClassSummary)
+
+# Training the Random Forest model
+rf_tuned <- train(
+  churn ~ ., 
+  data = train, 
+  method = "rf", 
+  metric = "ROC", 
+  tuneGrid = rf_grid, 
+  trControl = rf_control
+)
+
+# Print the tuned model results
+print(rf_tuned)
+```
+
+# Interpretation
+
+As for the Random Forest model, there are 2,667 customer samples to predict churn. It was then run with varying mtry where mtry is the number of features it assesses at each node.
+
+Clearly, mtry = 8 was the best model as it achieves nearly perfect identification of churners (99.87 %) and somewhat better identification of non-churners (47%).
+
+The model is quite good at predicting churners but it can still be better in terms of predicting non churners.
+
+Summary: The model clearly does a good job at predicting the churn probability but it could use a little fine tuning in order to accurately predict people who are going to be non churns mtry = 8 was found to have the best result.
+
+# Model Evaluation
+
+# Function to Calculate Metrics
+
+```{r}
+get_metrics <- function(predictions, probabilities, actuals) {
+  cm <- confusionMatrix(predictions, actuals, positive = "yes")
+  roc_curve <- roc(actuals, probabilities)
+  
+  list(
+    Accuracy = cm$overall["Accuracy"],
+    Precision = cm$byClass["Precision"],
+    Recall = cm$byClass["Recall"],
+    F1_Score = cm$byClass["F1"],
+    AUC = auc(roc_curve)
+  )
+}
+
+```
+
+# Collecting Metrics for All Models
+
+```{r}
+# Initialize an empty data frame for comparison
+model_comparison <- data.frame(
+  Model = character(),
+  Accuracy = numeric(),
+  Precision = numeric(),
+  Recall = numeric(),
+  F1_Score = numeric(),
+  AUC = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# Define get_metrics function (if not already defined)
+get_metrics <- function(predictions, probs, actual) {
+  # Ensure predictions are factors with the same levels as actual
+  predictions <- factor(predictions, levels = levels(actual))
+  
+  # Confusion matrix
+  cm <- confusionMatrix(predictions, actual, positive = "yes")
+  
+  # Extract metrics
+  accuracy <- cm$overall["Accuracy"]
+  precision <- cm$byClass["Precision"]
+  recall <- cm$byClass["Recall"]
+  f1_score <- cm$byClass["F1"]
+  
+  # Compute AUC
+  roc_obj <- roc(actual, probs)
+  auc_value <- auc(roc_obj)
+  
+  # Return a named list of metrics
+  return(list(
+    Accuracy = accuracy,
+    Precision = precision,
+    Recall = recall,
+    F1_Score = f1_score,
+    AUC = auc_value
+  ))
+}
+
+# Logistic Regression
+# Get probabilities for the "yes" class
+logistic_probs <- predict(logistic_model, newdata = test, type = "prob")[, "yes"]
+
+# Convert probabilities to class predictions using a 0.5 threshold
+logistic_predictions <- ifelse(logistic_probs > 0.5, "yes", "no")
+
+# Ensure predictions are factors with the same levels as the actual target variable
+logistic_predictions <- factor(logistic_predictions, levels = levels(test$churn))
+
+# Calculate metrics
+logistic_metrics <- get_metrics(logistic_predictions, logistic_probs, test$churn)
+
+# Add results to the comparison data frame
+model_comparison <- rbind(model_comparison, data.frame(
+  Model = "Logistic Regression",
+  Accuracy = logistic_metrics$Accuracy,
+  Precision = logistic_metrics$Precision,
+  Recall = logistic_metrics$Recall,
+  F1_Score = logistic_metrics$F1_Score,
+  AUC = logistic_metrics$AUC
+))
+
+# Decision Tree
+tree_probs <- predict(tree_model, newdata = test, type = "prob")[, 2]
+tree_predictions <- predict(tree_model, newdata = test, type = "class")
+tree_metrics <- get_metrics(tree_predictions, tree_probs, test$churn)
+model_comparison <- rbind(model_comparison, data.frame(
+  Model = "Decision Tree",
+  Accuracy = tree_metrics$Accuracy,
+  Precision = tree_metrics$Precision,
+  Recall = tree_metrics$Recall,
+  F1_Score = tree_metrics$F1_Score,
+  AUC = tree_metrics$AUC
+))
+
+# Random Forest
+# Get probabilities for the "yes" class
+rf_probs <- predict(rf_tuned, newdata = test, type = "prob")[, "yes"]
+
+# Convert probabilities to class predictions using a 0.5 threshold
+rf_predictions <- ifelse(rf_probs > 0.5, "yes", "no")
+
+# Ensure predictions are factors with the same levels as the actual target variable
+rf_predictions <- factor(rf_predictions, levels = levels(test$churn))
+
+# Calculate metrics
+rf_metrics <- get_metrics(rf_predictions, rf_probs, test$churn)
+
+# Add results to the comparison data frame
+model_comparison <- rbind(model_comparison, data.frame(
+  Model = "Random Forest",
+  Accuracy = rf_metrics$Accuracy,
+  Precision = rf_metrics$Precision,
+  Recall = rf_metrics$Recall,
+  F1_Score = rf_metrics$F1_Score,
+  AUC = rf_metrics$AUC
+))
+
+
+# Display the comparison table
+print(model_comparison)
+
+
+```
+
+# Interpretation
+Accuracy:
+Logistic Regression: 86.64%
+Decision Tree: 92.49%
+Random Forest: 92.04%
+
+Conclusion: The highest accuracy is with Decision Tree 92.49% / Rand. Forst 92.04%. Finally, the comparison of the performances of all the three classifiers is showed in terms of accuracy.
+
+Sensitivity (True Positive Rate):
+Logistic Regression: 58.54%
+Decision Tree: 80.26%
+Random Forest: 92.16%
+
+Conclusion: From the tables we can see that Random Forest, our best algorithm, has the highest sensitivity of 92.16 percent:
+
+Specificity (True Negative Rate):
+Logistic Regression: 25.00%
+Decision Tree: 63.54%
+Random Forest: 48.96%
+
+Conclusion: Decision Tree also has the lowest accuracy, which means it has the highest specificity of 63.54%, which is the ability to correctly predict that customers will not churn.
+
+Precision:
+Logistic Regression: 35.04%
+Decision Tree: 70.93%
+Random Forest: 63.95%
+
+Conclusion: According to the accuracy measurements, Decision Tree has the highest precision of 70.93%, so it’s especially accurate if it classifies a customer as a churner.
+
+AUC (Area Under the Curve):
+Logistic Regression: 0.7849
+Decision Tree: 0.8824
+Random Forest: 0.9149
+
+Conclusion: Random Forest performs the best based on the AUC score with 0.9149 meaning the algorithm can well separate churners from non-churners.
+
+Summary:
+
+Random Forest is the best model for churn prediction based on its high sensitivity (92.16%) and AUC (0.9149), making it excellent at identifying customers who will churn. Although Decision Tree has slightly higher accuracy (92.49%) and specificity (63.54%), Random Forest offers a more balanced and effective performance overall. It stands out as the most reliable model for distinguishing between churners and non-churners.
+
+# Loading and Preparing New Data for Prediction
+
+```{r}
+load("C:\\Users\\nisha\\Downloads\\Customers_To_Predict.RData")
+```
+
+# View the First Few Rows of the Data
+
+```{r}
+head(Customers_To_Predict)
+
+```
+
+Align Factor Levels Between Training and Prediction Datasets
+
+```{r}
+# Align factor levels
+for (col in names(train)) {
+  if (is.factor(train[[col]]) && col %in% names(Customers_To_Predict)) {
+    Customers_To_Predict[[col]] <- factor(Customers_To_Predict[[col]], levels = levels(train[[col]]))
+  }
+}
+
+# Add missing columns
+missing_cols <- setdiff(names(train), names(Customers_To_Predict))
+Customers_To_Predict[missing_cols] <- NA
+
+```
+
+# Interpretation
+
+This code guarantees that the categories of the factors in the `Customers_To_Predict` are in agreement with that of the `train’ data set. For each factor column in the`train’ dataset it checks whether the factor column also exists in the `Customers_To_Predict’ set and if the column exists it re-levels`Customers_To_Predict’ factor columns to match those of the \`train’ set. This step is used because the model only accepts the list of possible category values to be as equals as those used in training data. Moreover, the columns that are included in the ‘train’ but not in the ‘Customers_To_Predict’ are searched, and the selected unavailable columns are then created as extra columns of NA to complete the structure of both datasets.
+
+# Handle Missing Values in the Prediction Dataset Using Imputation
+
+```{r}
+for (col in names(Customers_To_Predict)) {
+  if (is.numeric(Customers_To_Predict[[col]])) {
+    Customers_To_Predict[[col]][is.na(Customers_To_Predict[[col]])] <- mean(Customers_To_Predict[[col]], na.rm = TRUE)
+  } else if (is.factor(Customers_To_Predict[[col]])) {
+    Customers_To_Predict[[col]][is.na(Customers_To_Predict[[col]])] <- as.character(table(Customers_To_Predict[[col]])[which.max(table(Customers_To_Predict[[col]]))])
+  }
+}
+
+```
+
+# Interpretation
+
+This code imputes \`NA’s in the Customers_To_Predict dataset. In the numeric columns, missing values are filled with mean of other numbers for that particular column. For categorical features it fills in missing values with the mode of the feature. This helps to clean up the dataset, by making sure that no missing data point is left to hinder analysis or prediction.
+
+# Predict Churn Probabilities for New Customer Data using Random forest model
+
+```{r}
+Customers_To_Predict$Churn_Prob <- predict(rf_tuned, newdata = Customers_To_Predict, type = "prob")[, 2]
+
+```
+
+# Interpretation
+
+This code then uses the above defined ‘rf_tuned’ to map each Customer in the Customers_To_Predict dataset to its predicted churn probability. The churn probabilities are obtained using the `predict()` function and the result is `[, 2]` which corresponds to the probability of churn. These probabilities are then retained in the new column named as “Churn_Prob” which indicates the probability of any customer churning out.
+
+# Save Predictions to CSV
+
+```{r}
+write.csv(Customers_To_Predict, "C:\\Users\\nisha\\Downloads\\New_Customers_To_Predict.csv", row.names = FALSE)
+
+```
+
+# Interpretation
+
+The following code write the newly formed `Customers_To_Predict` table which contains the churn probabilities to a new CSV file. The file is then stored in the identified directory in the computer . The `row.names = FALSE` part makes it that row number figures are not saved as part of the file. This makes it easier with the data later at a different time to be used for other analysis or reports.
+
+# Classify Customers Based on the Predicted Probability of Churn
+
+```{r}
+threshold <- 0.5
+Customers_To_Predict <- Customers_To_Predict %>%
+  mutate(churn = ifelse(Churn_Prob > threshold, "yes", "no"))
+
+```
+
+# Interpretation
+
+This code adds a new datafield ‘churn’ to the ‘Customers_To_Predict’ data set. To determine this, it employs the rate probability of churn on the customers as shown by the churn probabilities (`Churn_Prob`). If the estimated probability obtained from prediction model is greater than **0.5**, the customer is categorized as “yes” (churner). If the probability is of value **0.5 or lower**, the customer is consolidated under “no” implying a likelihood of remaining loyal. This step makes the probabilities real by bringing out the total churn predictions.
+
+# Preview the Final Predictions
+
+```{r}
+head(Customers_To_Predict)
+
+```
+
+# Save the Dataset with the Predicted Churn Labels
+
+```{r}
+write.csv(Customers_To_Predict, "C:\\Users\\nisha\\Downloads\\Prediction.csv", row.names = FALSE)
+```
+
+# Save the R Workspace for Future Reference
+
+```{r}
+save.image(file = "Group_8.RData")  # Replace X with your group number
+
+```
